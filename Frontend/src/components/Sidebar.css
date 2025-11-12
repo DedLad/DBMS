@@ -1,0 +1,154 @@
+.sidebar {
+  width: 250px;
+  background: var(--bg);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  gap: 20px;
+  height: 100vh;
+  overflow-y: auto;
+  position: sticky;
+  top: 0;
+}
+
+.sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: var(--text-light);
+}
+
+.logo {
+  font-size: 20px;
+  font-weight: 700;
+  padding: 10px 0;
+  text-align: center;
+  color: var(--text);
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
+  font-size: 14px;
+  color: var(--text-light);
+  font-family: inherit;
+  font-weight: 500;
+}
+
+.nav-item:hover {
+  background: var(--bg-light);
+  color: var(--text);
+}
+
+.nav-item.active {
+  background: var(--primary);
+  color: white;
+  font-weight: 600;
+}
+
+.nav-icon {
+  font-size: 18px;
+  min-width: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-label {
+  flex: 1;
+  text-align: left;
+}
+
+.sidebar-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  margin-top: auto;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--bg-light);
+  color: var(--text-light);
+}
+
+.status.connected {
+  color: var(--success);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.status.disconnected {
+  color: var(--danger);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  color: var(--text-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.icon-btn:hover {
+  background: var(--bg-light);
+  color: var(--text);
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 70px;
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .nav-label {
+    display: none;
+  }
+
+  .logo {
+    font-size: 20px;
+  }
+
+  .nav-icon {
+    font-size: 20px;
+  }
+}
