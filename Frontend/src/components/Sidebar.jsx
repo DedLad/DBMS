@@ -11,6 +11,7 @@ const PAGES = [
   { id: 'orders', icon: '📋', label: 'Orders' },
   { id: 'analytics', icon: '📈', label: 'Analytics' },
   { id: 'db-objects', icon: '🔧', label: 'DB Objects' },
+  { id: 'users', icon: '🛡️', label: 'Users & Roles' },
 ]
 
 export default function Sidebar({ page, onPageChange, connected, dark, onToggleDark }) {

@@ -116,17 +116,29 @@ export default function CRUD({ entity }) {
 
   const handleModalSave = async (data) => {
     try {
+      // Preprocess date fields to ensure YYYY-MM-DD format
+      const processed = { ...data }
+      config.fields.filter(f=>f.type==='date').forEach(f=>{
+        if (processed[f.key]) {
+          if (/^\d{4}-\d{2}-\d{2}$/.test(processed[f.key])) {
+            // ok
+          } else {
+            const d = new Date(processed[f.key])
+            if (!isNaN(d)) processed[f.key] = d.toISOString().slice(0,10)
+          }
+        }
+      })
       if (editingId) {
         await apiCall(`${config.api}/${editingId}`, {
           method: 'PUT',
-          body: JSON.stringify(data),
+          body: JSON.stringify(processed),
           headers: { 'Content-Type': 'application/json' }
         })
         setSuccess(`${config.title.slice(0, -1)} updated successfully`)
       } else {
         await apiCall(config.api, {
           method: 'POST',
-          body: JSON.stringify(data),
+          body: JSON.stringify(processed),
           headers: { 'Content-Type': 'application/json' }
         })
         setSuccess(`${config.title.slice(0, -1)} added successfully`)
@@ -138,7 +150,8 @@ export default function CRUD({ entity }) {
       fetchData()
     } catch (error) {
       console.error('Error saving:', error)
-      setError(`Failed to save ${config.title.toLowerCase()}`)
+      const msg = (typeof error === 'string' ? error : (error?.message || error?.error)) || `Failed to save ${config.title.toLowerCase()}`
+      setError(msg)
     }
   }
 

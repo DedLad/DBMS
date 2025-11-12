@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard'
 import CRUD from './pages/CRUD'
 import Analytics from './pages/Analytics'
 import DatabaseObjects from './pages/DatabaseObjects'
+import Users from './pages/Users'
 import './App.css'
 
 export default function App() {
@@ -47,6 +48,7 @@ export default function App() {
           <CRUD entity={page} />}
         {page === 'analytics' && <Analytics />}
         {page === 'db-objects' && <DatabaseObjects />}
+        {page === 'users' && <Users />}
       </main>
     </div>
   )

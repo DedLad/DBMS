@@ -7,7 +7,20 @@ export default function Modal({ title, fields, initialData, onSave, onClose }) {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    setForm(initialData || {})
+    // Normalize incoming data, especially dates to YYYY-MM-DD for <input type="date">
+    const src = initialData || {}
+    const normalized = {}
+    for (const f of (fields || [])) {
+      let v = src[f.key]
+      if (f.type === 'date' && v) {
+        const d = new Date(v)
+        if (!isNaN(d)) {
+          v = d.toISOString().slice(0, 10)
+        }
+      }
+      normalized[f.key] = v ?? ''
+    }
+    setForm(normalized)
     setError('')
   }, [initialData])
 
@@ -22,8 +35,27 @@ export default function Modal({ title, fields, initialData, onSave, onClose }) {
       }
     }
     
+    // Ensure date values are serialized as YYYY-MM-DD
+    const payload = { ...form }
+    for (const f of (fields || [])) {
+      if (f.type === 'date' && payload[f.key]) {
+        const val = payload[f.key]
+        if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+          // already OK
+        } else {
+          const d = new Date(val)
+          if (!isNaN(d)) {
+            payload[f.key] = d.toISOString().slice(0, 10)
+          }
+        }
+      }
+      if (f.type === 'number' && payload[f.key] !== '' && payload[f.key] !== null && payload[f.key] !== undefined) {
+        payload[f.key] = Number(payload[f.key])
+      }
+    }
+
     setError('')
-    onSave(form)
+    onSave(payload)
   }
 
   const handleChange = (key, value, type) => {

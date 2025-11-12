@@ -1,0 +1,26 @@
+.users-page{min-height:100vh;background:linear-gradient(135deg,var(--primary-dark),var(--primary-darker));padding:2rem;color:var(--text-primary)}
+.users-page .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:2px solid var(--border-color)}
+.users-page .header h1{margin:0;font-size:2rem;color:var(--accent-blue)}
+.users-page .header p{margin:.25rem 0 0 0;color:var(--text-secondary)}
+.users-page .header .icon{color:var(--accent-blue);opacity:.85}
+.msg{display:flex;align-items:center;gap:.5rem;border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;font-weight:600}
+.msg.success{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.35);color:#22c55e}
+.msg.error{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.35);color:#ef4444}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.card{background:var(--card-background);border:1px solid var(--border-color);border-radius:12px;padding:1rem}
+.row{display:flex;flex-direction:column;gap:.5rem;margin:.5rem 0}
+.row label{color:var(--text-secondary);font-weight:600}
+.row input,.row select{background:rgba(255,255,255,.05);border:1px solid var(--border-color);color:var(--text-primary);padding:.65rem .8rem;border-radius:6px}
+.btn{background:linear-gradient(135deg,var(--accent-blue),var(--accent-light-blue));border:none;color:#fff;padding:.6rem 1rem;border-radius:8px;cursor:pointer;font-weight:700;display:inline-flex;align-items:center;gap:.5rem}
+.btn.ghost{background:transparent;border:1px solid var(--border-color);color:var(--text-secondary)}
+.list-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem}
+.table-wrap{overflow:auto}
+.table{width:100%;border-collapse:collapse}
+.table th,.table td{border-bottom:1px solid var(--border-color);text-align:left;padding:.6rem}
+.table th{color:var(--text-secondary);font-weight:700}
+.empty{color:var(--text-secondary);text-align:center}
+.pill{padding:.2rem .5rem;border-radius:999px;font-size:.8rem;font-weight:700}
+.pill.admin{background:rgba(59,130,246,.15);color:#60a5fa}
+.pill.operator{background:rgba(234,179,8,.15);color:#fbbf24}
+.pill.analyst{background:rgba(16,185,129,.15);color:#34d399}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}

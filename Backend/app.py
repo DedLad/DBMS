@@ -301,21 +301,51 @@ def delete_order(order_id):
 
 @app.route('/api/analytics/join-query', methods=['GET'])
 def analytics_join_query():
-    sql = 'SELECT e.E_ID, e.FName, e.LName FROM EMPLOYEE e'
+    sql = '''
+    SELECT 
+      e.E_ID,
+      CONCAT(e.FName, ' ', e.LName) as FullName,
+      e.Email,
+      e.Position,
+      d.Dept_name as Department,
+      d.Budget as DepartmentBudget,
+      e.Salary,
+      e.Hire_date,
+      COUNT(DISTINCT po.Order_ID) as OrdersInvolved,
+      SUM(po.Qty) as TotalQuantityHandled
+    FROM EMPLOYEE e
+    LEFT JOIN EMPLOYS emp ON e.E_ID = emp.E_ID
+    LEFT JOIN DEPARTMENT d ON emp.Dept_ID = d.Dept_ID
+    LEFT JOIN PRODUCTION_ORDER po ON e.E_ID = po.Order_ID OR 1=0
+    GROUP BY e.E_ID, e.FName, e.LName, e.Email, e.Position, d.Dept_name, d.Budget, e.Salary, e.Hire_date
+    ORDER BY e.E_ID
+    '''
     results = execute_query(sql)
-    return jsonify({'query_type': 'JOIN', 'data': results or []}), 200
+    return jsonify({
+        'query_type': 'JOIN',
+        'description': 'Complex multi-table JOIN showing employee details enriched with department information, salary, and production order involvement. Uses LEFT JOINs to include employees without department assignments.',
+        'data': results or []
+    }), 200
 
 @app.route('/api/analytics/nested-query', methods=['GET'])
 def analytics_nested_query():
     sql = 'SELECT * FROM PRODUCTION_ORDER WHERE Qty > (SELECT AVG(Qty) FROM PRODUCTION_ORDER)'
     results = execute_query(sql)
-    return jsonify({'query_type': 'NESTED', 'data': results or []}), 200
+    return jsonify({
+        'query_type': 'NESTED',
+        'description': 'Nested subquery that identifies all production orders with quantities above the average. Useful for identifying high-volume orders and production priorities.',
+        'data': results or []
+    }), 200
 
 @app.route('/api/analytics/aggregate-query', methods=['GET'])
 def analytics_aggregate_query():
     sql = 'SELECT COUNT(*) as total_orders FROM PRODUCTION_ORDER'
     results = execute_query(sql)
-    return jsonify({'query_type': 'AGGREGATE', 'data': results[0] if results else {}}), 200
+    return jsonify({
+        'query_type': 'AGGREGATE',
+        'description': 'Aggregate function that counts the total number of production orders in the system. Demonstrates COUNT aggregation for summary statistics.',
+        'data': results[0] if results else {}
+    }), 200
 
 @app.route('/api/analytics/triggers', methods=['GET'])
 def analytics_triggers():
@@ -453,6 +483,119 @@ def execute_procedure():
                 conn.close()
         else:
             return jsonify({'error': 'Unknown procedure'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Users and Roles management
+import re
+
+ALLOWED_USERNAME = re.compile(r'^[A-Za-z0-9_]{3,30}$')
+
+def _run_statements(statements):
+    conn = get_connection()
+    if not conn:
+        raise Exception('Database connection failed')
+    cursor = conn.cursor()
+    try:
+        for stmt in statements:
+            cursor.execute(stmt)
+        conn.commit()
+    finally:
+        cursor.close()
+        conn.close()
+
+def _grants_for_user(user, host='%'):
+    conn = get_connection()
+    if not conn:
+        return []
+    cur = conn.cursor()
+    try:
+        cur.execute(f"SHOW GRANTS FOR '{user}'@'{host}'")
+        return [row[0] for row in cur.fetchall()]
+    except Exception:
+        return []
+    finally:
+        cur.close()
+        conn.close()
+
+def _detect_role_from_grants(grants, db_name):
+    joined = '\n'.join(grants)
+    if f"GRANT ALL PRIVILEGES ON `{db_name}`.*" in joined or f"GRANT ALL PRIVILEGES ON {db_name}.*" in joined:
+        return 'admin'
+    core = ['EMPLOYEE','DEPARTMENT','FACTORY','MACHINE','PRODUCT','PRODUCTION_ORDER']
+    has_crud = all(any(f"ON `{db_name}`.`{t}`" in g and any(k in g for k in ['INSERT','UPDATE','DELETE','SELECT']) for g in grants) for t in core)
+    if has_crud:
+        return 'operator'
+    if ('GRANT SELECT ON' in joined and (f"ON `{db_name}`.*" in joined or f"ON {db_name}.*" in joined)) or 'GRANT EXECUTE ON' in joined:
+        return 'analyst'
+    return 'custom'
+
+@app.route('/api/users', methods=['GET','POST','OPTIONS'])
+def manage_users():
+    if request.method == 'OPTIONS':
+        return '', 204
+
+    db_name = DB_CONFIG.get('database') or 'FactoryManagement'
+
+    if request.method == 'GET':
+        # List non-system users and infer roles
+        users = []
+        conn = get_connection()
+        if not conn:
+            return jsonify({'error':'Database connection failed'}), 500
+        cur = conn.cursor(dictionary=True)
+        try:
+            cur.execute("SELECT User, Host FROM mysql.user WHERE User NOT IN ('mysql.session','mysql.sys','root') ORDER BY User")
+            rows = cur.fetchall() or []
+        finally:
+            cur.close(); conn.close()
+        for r in rows:
+            grants = _grants_for_user(r['User'], r['Host'])
+            users.append({
+                'user': r['User'],
+                'host': r['Host'],
+                'role': _detect_role_from_grants(grants, db_name),
+                'grants': grants
+            })
+        return jsonify({'users': users}), 200
+
+    # POST - create user
+    data = request.get_json(force=True) or {}
+    username = data.get('username','').strip()
+    password = data.get('password','')
+    role = (data.get('role') or '').lower().strip()
+
+    if not ALLOWED_USERNAME.match(username):
+        return jsonify({'error': 'Username must be 3-30 chars, letters/numbers/underscore only'}), 400
+    if not password or len(password) < 6:
+        return jsonify({'error': 'Password must be at least 6 characters'}), 400
+    if role not in ('admin','operator','analyst'):
+        return jsonify({'error': 'Role must be one of: admin, operator, analyst'}), 400
+
+    stmts = [f"CREATE USER IF NOT EXISTS '{username}'@'%' IDENTIFIED BY %s"]
+    # We cannot parameterize identifiers in GRANT statements; using f-strings with validated inputs.
+    stmts_rendered = [stmts[0].replace('%s', f"'{password}'")]
+
+    if role == 'admin':
+        stmts_rendered.append(f"GRANT ALL PRIVILEGES ON `{db_name}`.* TO '{username}'@'%' ")
+    elif role == 'operator':
+        tables = ['EMPLOYEE','DEPARTMENT','FACTORY','MACHINE','PRODUCT','PRODUCTION_ORDER']
+        for t in tables:
+            stmts_rendered.append(f"GRANT SELECT, INSERT, UPDATE, DELETE ON `{db_name}`.`{t}` TO '{username}'@'%' ")
+    elif role == 'analyst':
+        stmts_rendered.append(f"GRANT SELECT ON `{db_name}`.* TO '{username}'@'%' ")
+        # Functions
+        for fn in ['get_department_by_emp','total_qty_by_product']:
+            stmts_rendered.append(f"GRANT EXECUTE ON FUNCTION `{db_name}`.`{fn}` TO '{username}'@'%' ")
+        # Procedures
+        for proc in ['assign_machine_to_factory','update_priority_based_on_qty']:
+            stmts_rendered.append(f"GRANT EXECUTE ON PROCEDURE `{db_name}`.`{proc}` TO '{username}'@'%' ")
+
+    stmts_rendered.append('FLUSH PRIVILEGES')
+
+    try:
+        _run_statements(stmts_rendered)
+        return jsonify({'message': f"User '{username}' created/updated with role '{role}'"}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

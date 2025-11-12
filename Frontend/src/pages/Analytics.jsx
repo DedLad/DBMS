@@ -12,10 +12,7 @@ export default function Analytics() {
   const queries = [
     { id: 'join', name: 'Join Query', description: 'Query demonstrating table joins', icon: Database },
     { id: 'nested', name: 'Nested Query', description: 'Query with nested subqueries', icon: Database },
-    { id: 'aggregate', name: 'Aggregate Query', description: 'Aggregation and grouping', icon: Database },
-    { id: 'triggers', name: 'Database Triggers', description: 'List of database triggers', icon: Database },
-    { id: 'functions', name: 'Database Functions', description: 'List of database functions', icon: Database },
-    { id: 'procedures', name: 'Stored Procedures', description: 'List of stored procedures', icon: Database }
+    { id: 'aggregate', name: 'Aggregate Query', description: 'Aggregation and grouping', icon: Database }
   ]
 
   useEffect(() => {
@@ -26,10 +23,7 @@ export default function Analytics() {
     setLoading(true)
     setError(null)
     try {
-      let endpoint = `/analytics/${activeQuery}`
-      if (!['triggers', 'functions', 'procedures'].includes(activeQuery)) {
-        endpoint += '-query'
-      }
+      let endpoint = `/analytics/${activeQuery}-query`
       const response = await apiCall(endpoint, {
         method: 'GET'
       })
@@ -40,6 +34,41 @@ export default function Analytics() {
       setData(null)
     }
     setLoading(false)
+  }
+
+  const queryText = () => {
+    switch (activeQuery) {
+      case 'join':
+        return `SELECT 
+  e.E_ID,
+  CONCAT(e.FName, ' ', e.LName) as FullName,
+  e.Email,
+  e.Position,
+  d.Dept_name as Department,
+  d.Budget as DepartmentBudget,
+  e.Salary,
+  e.Hire_date,
+  COUNT(DISTINCT po.Order_ID) as OrdersInvolved,
+  SUM(po.Qty) as TotalQuantityHandled
+FROM EMPLOYEE e
+LEFT JOIN EMPLOYS emp ON e.E_ID = emp.E_ID
+LEFT JOIN DEPARTMENT d ON emp.Dept_ID = d.Dept_ID
+LEFT JOIN PRODUCTION_ORDER po ON e.E_ID = po.Order_ID OR 1=0
+GROUP BY e.E_ID, e.FName, e.LName, e.Email, e.Position, d.Dept_name, d.Budget, e.Salary, e.Hire_date
+ORDER BY e.E_ID`;
+      case 'nested':
+        return `SELECT * FROM PRODUCTION_ORDER 
+WHERE Qty > (SELECT AVG(Qty) FROM PRODUCTION_ORDER)`;
+      case 'aggregate':
+        return `SELECT COUNT(*) as total_orders FROM PRODUCTION_ORDER`;
+      default:
+        return ''
+    }
+  }
+
+  const queryDescription = () => {
+    if (!data || !data.description) return ''
+    return data.description
   }
 
   const renderResults = () => {
@@ -148,6 +177,16 @@ export default function Analytics() {
       )}
 
       <div className="analytics-results">
+        <div className="query-sql" style={{marginBottom:'12px'}}>
+          <div style={{fontWeight:600, color:'var(--accent-blue)', marginBottom:'8px'}}>Query Description</div>
+          {queryDescription() && (
+            <div style={{background:'rgba(59,130,246,0.1)', padding:'12px', border:'1px solid var(--border-color)', borderRadius:'6px', color:'var(--text-secondary)', marginBottom:'12px', lineHeight:'1.5'}}>
+              {queryDescription()}
+            </div>
+          )}
+          <div style={{fontWeight:600, color:'var(--accent-blue)', marginBottom:'8px'}}>SQL</div>
+          <pre style={{background:'rgba(0,0,0,0.35)', padding:'10px', border:'1px solid var(--border-color)', borderRadius:'6px', overflowX:'auto', fontSize:'0.85rem', lineHeight:'1.4'}}>{queryText()}</pre>
+        </div>
         {renderResults()}
       </div>
     </div>
